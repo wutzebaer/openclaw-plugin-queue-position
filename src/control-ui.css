@@ -1,0 +1,16 @@
+.queue-position-page {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  color: var(--text);
+}
+
+.queue-position-page h1,
+.queue-position-page p {
+  margin: 0;
+}
+
+.queue-position-page ol {
+  margin: 0;
+  padding-left: 1.2rem;
+}

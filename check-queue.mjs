@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import { noteModelCallEnded, noteModelCallStarted, readModelLane, readModelQueuePosition, resetModelCalls } from "./dist/model-calls.js";
+import { formatPosition } from "./dist/report.js";
+
+const mine = "agent:main:dashboard:aaaaaaaa-bbbb";
+const other = "agent:main:dashboard:cccccccc-dddd";
+
+resetModelCalls();
+noteModelCallStarted({ callId: "a", sessionKey: other, at: 1_000 }, 1_000);
+noteModelCallStarted({ callId: "b", sessionKey: mine, at: 1_100 }, 1_100);
+noteModelCallStarted({ callId: "c", sessionKey: "agent:main:third", at: 1_200 }, 1_200);
+noteModelCallStarted({ callId: "a", sessionKey: other, at: 1_300 }, 1_300);
+
+assert.equal(readModelQueuePosition(other, 1_500).state, "running");
+assert.equal(formatPosition(readModelQueuePosition(other, 1_500)), "läuft");
+assert.equal(formatPosition(readModelQueuePosition(mine, 1_500)), "Platz 1 in Queue");
+assert.equal(formatPosition(readModelQueuePosition("agent:main:third", 1_500)), "Platz 2 in Queue");
+assert.equal(readModelQueuePosition("agent:main:idle", 1_500).state, "idle");
+assert.equal(formatPosition(readModelQueuePosition("agent:main:idle", 1_500)), "");
+
+noteModelCallEnded("a");
+assert.equal(readModelQueuePosition(mine, 1_600).state, "running");
+assert.equal(formatPosition(readModelQueuePosition("agent:main:third", 1_600)), "Platz 1 in Queue");
+assert.deepEqual(readModelLane(1_600).entries.map((item) => item.label), [
+  "läuft · …aaa-bbbb",
+  "Platz 1 · third",
+]);
+assert.equal(readModelLane(1_600).active, 1);
+assert.equal(readModelLane(1_600).waiting, 1);
+
+console.log("queue position checks passed");

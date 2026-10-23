@@ -1,0 +1,23 @@
+{
+  "id": "queue-position",
+  "name": "Queue Position",
+  "description": "Shows whether a model request is being served or which queue place it holds.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "controlUi": {
+    "entry": "dist/control-ui/5af4a12fcd184ecaf71863e4db4e8e1664b692138455e909903fc08d881074d7/index.js",
+    "styles": [
+      "dist/control-ui/5af4a12fcd184ecaf71863e4db4e8e1664b692138455e909903fc08d881074d7/index.css"
+    ]
+  },
+  "contracts": {
+    "tools": []
+  }
+}
