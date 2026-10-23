@@ -1,7 +1,7 @@
 import { defineControlUiPlugin } from "openclaw/plugin-sdk/control-ui";
 import { createFeatureClient } from "openclaw/plugin-sdk/feature-contract";
 import { contract } from "./contract.js";
-import { formatPosition } from "./report.js";
+import { copyFor, formatLaneEntry, formatPosition } from "./i18n.js";
 import "./control-ui.css";
 function isRecord(value) {
     return typeof value === "object" && value !== null;
@@ -26,7 +26,10 @@ function isLane(value) {
         typeof value.truncated !== "boolean") {
         return false;
     }
-    return value.entries.every((entry) => isRecord(entry) && typeof entry.label === "string");
+    return value.entries.every((entry) => isRecord(entry) &&
+        (entry.state === "running" || entry.state === "queued") &&
+        isCount(entry.position) &&
+        typeof entry.label === "string");
 }
 export default defineControlUiPlugin({
     id: contract.pluginId,
@@ -60,7 +63,7 @@ export default defineControlUiPlugin({
         };
         const currentLabel = () => {
             const cached = cache.get(selectedKey);
-            return cached?.report ? formatPosition(cached.report) : "";
+            return cached?.report ? formatPosition(cached.report, copyFor(host.locale)) : "";
         };
         const schedulePaint = () => {
             if (paintScheduled || host.signal.aborted)
@@ -82,29 +85,28 @@ export default defineControlUiPlugin({
             schedulePaint();
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
-        const stopSubscribe = host.subscribe(tick);
-        const timer = window.setInterval(tick, 1000);
+        let stopSubscribe = () => { };
+        const timer = window.setInterval(() => tickWithLocale(), 1000);
         host.signal.addEventListener("abort", () => {
             window.clearInterval(timer);
             observer.disconnect();
             stopSubscribe();
             paintQueueStatus("");
         }, { once: true });
-        tick();
-        host.ui.registerNavigation({
+        const navigation = {
             id: "queue",
-            label: "Warteschlange",
+            label: copyFor(host.locale).queue,
             page: { id: "queue" },
             icon: "list",
-        });
-        host.ui.registerPage({
+        };
+        const page = {
             id: "queue",
-            label: "Warteschlange",
+            label: navigation.label,
             mount(container, context) {
                 const section = document.createElement("section");
                 section.className = "queue-position-page";
                 const heading = document.createElement("h1");
-                heading.textContent = "Warteschlange";
+                heading.textContent = copyFor(host.locale).queue;
                 const summary = document.createElement("p");
                 const list = document.createElement("ol");
                 section.append(heading, summary, list);
@@ -120,13 +122,15 @@ export default defineControlUiPlugin({
                         if (disposed || current !== request || context.signal.aborted)
                             return;
                         if (!isLane(report))
-                            throw new Error("ungültige Antwort");
-                        renderLane(summary, list, report);
+                            throw new Error("invalid response");
+                        const copy = copyFor(host.locale);
+                        heading.textContent = copy.queue;
+                        renderLane(summary, list, report, copy);
                     }
                     catch {
                         if (disposed || current !== request || context.signal.aborted)
                             return;
-                        summary.textContent = "Warteschlange nicht lesbar";
+                        summary.textContent = copyFor(host.locale).unavailable;
                         list.replaceChildren();
                     }
                 };
@@ -142,7 +146,26 @@ export default defineControlUiPlugin({
                     },
                 };
             },
-        });
+        };
+        let seenLocale = host.locale;
+        const applyLocale = () => {
+            if (host.locale === seenLocale)
+                return;
+            seenLocale = host.locale;
+            const title = copyFor(seenLocale).queue;
+            navigation.label = title;
+            page.label = title;
+            host.ui.invalidate();
+        };
+        const scheduledTick = tick;
+        const tickWithLocale = () => {
+            applyLocale();
+            scheduledTick();
+        };
+        host.ui.registerNavigation(navigation);
+        host.ui.registerPage(page);
+        stopSubscribe = host.subscribe(tickWithLocale);
+        tickWithLocale();
     },
 });
 function visibleWorkingStatuses() {
@@ -190,29 +213,28 @@ function paintQueueStatus(label) {
             status.append(text);
     }
 }
-function renderLane(summary, list, report) {
+function renderLane(summary, list, report, copy) {
     if (!report.available) {
-        summary.textContent = "Warteschlange nicht lesbar";
+        summary.textContent = copy.unavailable;
         list.replaceChildren();
         return;
     }
-    const waiting = report.waiting === 1 ? "1 wartet" : `${report.waiting} warten`;
-    summary.textContent = report.active === 0 ? "keine Anfrage unterwegs" : `1 wird bedient · ${waiting}`;
+    summary.textContent = report.active === 0 ? copy.noRequest : copy.served(report.waiting);
     list.replaceChildren();
     if (report.entries.length === 0) {
         const item = document.createElement("li");
-        item.textContent = "niemand wartet";
+        item.textContent = copy.nobodyWaiting;
         list.append(item);
         return;
     }
     for (const entry of report.entries) {
         const item = document.createElement("li");
-        item.textContent = entry.label;
+        item.textContent = formatLaneEntry(entry, copy);
         list.append(item);
     }
     if (report.truncated) {
         const item = document.createElement("li");
-        item.textContent = "weitere Einträge nicht angezeigt";
+        item.textContent = copy.more;
         list.append(item);
     }
 }

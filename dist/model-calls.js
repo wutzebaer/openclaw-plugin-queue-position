@@ -35,7 +35,7 @@ export function readModelQueuePosition(sessionKey, now = Date.now()) {
 }
 function shortLabel(sessionKey) {
     if (!sessionKey)
-        return "ohne Zuordnung";
+        return "";
     const tail = sessionKey.split(":").pop() ?? sessionKey;
     return tail.length > 8 ? `…${tail.slice(-8)}` : tail;
 }
@@ -48,9 +48,9 @@ export function readModelLane(now = Date.now()) {
         waiting: Math.max(0, calls.length - 1),
         truncated: calls.length > visible.length,
         entries: visible.map((call, index) => ({
-            label: index === 0
-                ? `läuft · ${shortLabel(call.sessionKey)}`
-                : `Platz ${index} · ${shortLabel(call.sessionKey)}`,
+            state: index === 0 ? "running" : "queued",
+            position: index === 0 ? 0 : index,
+            label: shortLabel(call.sessionKey),
         })),
     };
 }

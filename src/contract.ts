@@ -34,7 +34,11 @@ export const contract = defineFeatureContract({
           truncated: Type.Boolean(),
           entries: Type.Array(
             Type.Object(
-              { label: Type.String({ maxLength: 80 }) },
+              {
+                state: Type.Union([Type.Literal("running"), Type.Literal("queued")]),
+                position: count,
+                label: Type.String({ maxLength: 80 }),
+              },
               { additionalProperties: false },
             ),
             { maxItems: 40 },

@@ -7,6 +7,8 @@ export type QueuePosition = {
 };
 
 export type LaneEntry = {
+  state: "running" | "queued";
+  position: number;
   label: string;
 };
 
@@ -17,10 +19,3 @@ export type LaneSnapshot = {
   truncated: boolean;
   entries: LaneEntry[];
 };
-
-export function formatPosition(report: QueuePosition): string {
-  if (!report.available || report.state === "idle") return "";
-  if (report.state === "running") return "läuft";
-  if (report.position < 1) return "";
-  return `Platz ${report.position} in Queue`;
-}
