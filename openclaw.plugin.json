@@ -2,7 +2,7 @@
   "id": "queue-position",
   "name": "Queue Position",
   "description": "Shows whether a model request is being served or which queue place it holds.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
